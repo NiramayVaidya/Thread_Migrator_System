@@ -8,6 +8,14 @@
 #include <ucontext.h>
 #include <pthread.h>
 
+#define DEBUG_LEVEL 1
+#define INFO_LEVEL 1
+#define WARN_LEVEL 1
+#define ERROR_LEVEL 1
+
+#define PORT_MIN 1024
+#define PORT_MAX 65535
+
 // typedef struct psu_thread_info psu_thread_info_t;
 
 void psu_thread_setup_init(int mode);
