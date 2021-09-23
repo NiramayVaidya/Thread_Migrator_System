@@ -12,7 +12,7 @@
 
 char REMOTE_HOSTNAME[255];
 
-void print_hostname()
+void print_hostname(int lineno)
 {
   char buffer[100];
   int ret;
@@ -20,15 +20,15 @@ void print_hostname()
     perror("gethostname");
     exit(1);
   }
-  printf("Hostname: %s\n", buffer);
+  printf("Hostname: %s, lineno: %d\n", buffer, lineno);
 }
 
 void* foo(void* arg)
 {
-  print_hostname();
+  print_hostname(__LINE__);
   printf("Foo: Entry\n");
   psu_thread_migrate(REMOTE_HOSTNAME);
-  print_hostname();
+  print_hostname(__LINE__);
   printf("Foo: Exit\n");
   return NULL;
 }

@@ -1,0 +1,383 @@
+Breakpoint 1 at 0x1ccb: file psu_thread.c, line 191.
+Starting program: /home/niramay/Documents/Fall_2021/CSE_511_OS/project-1-thread-migrator-NiramayVaidya/app1 localhost 1
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Breakpoint 1, psu_thread_create (user_func=0x56556614 <foo>, user_args=0x0) at psu_thread.c:191
+191		if (getcontext(&uctx_foo) == -1) {
+eax            0x14                20
+ecx            0x0                 0
+edx            0xffffca08          -13816
+ebx            0x56559f58          1448451928
+esp            0xffffce80          0xffffce80
+ebp            0xffffce98          0xffffce98
+esi            0xffffcee0          -12576
+edi            0xf7f88000          -134709248
+eip            0x56556ccb          0x56556ccb <psu_thread_create+84>
+eflags         0x282               [ SF IF ]
+cs             0x23                35
+ss             0x2b                43
+ds             0x2b                43
+es             0x2b                43
+fs             0x0                 0
+gs             0x63                99
+Stack level 0, frame at 0xffffcea0:
+ eip = 0x56556ccb in psu_thread_create (psu_thread.c:191); saved eip = 0x56556712
+ called by frame at 0xffffcee0
+ source language c.
+ Arglist at 0xffffce7c, args: user_func=0x56556614 <foo>, user_args=0x0
+ Locals at 0xffffce7c, Previous frame's sp is 0xffffcea0
+ Saved registers:
+  ebx at 0xffffce94, ebp at 0xffffce98, eip at 0xffffce9c
+$1 = {uc_flags = 0x0, uc_link = 0x0, uc_stack = {ss_sp = 0x0, ss_flags = 0x0, ss_size = 0x0}, uc_mcontext = {gregs = {0x0 <repeats 19 times>}, fpregs = 0x0, oldmask = 0x0, cr2 = 0x0}, uc_sigmask = {__val = {0x0 <repeats 32 times>}}, __fpregs_mem = {cw = 0x0, sw = 0x0, 
+    tag = 0x0, ipoff = 0x0, cssel = 0x0, dataoff = 0x0, datasel = 0x0, _st = {{significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 
+          0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}}, status = 0x0}, 
+  __ssp = {0x0, 0x0, 0x0, 0x0}}
+196		uctx_foo.uc_stack.ss_sp = foo_stack;
+197		uctx_foo.uc_stack.ss_size = sizeof(foo_stack);
+198		if (!g_mode) {
+204		else if (g_mode == 1) {
+206			n = read(socket_fd, &foo_offset, sizeof(int));
+eax            0x1                 1
+ecx            0x0                 0
+edx            0x56559f58          1448451928
+ebx            0x56559f58          1448451928
+esp            0xffffce80          0xffffce80
+ebp            0xffffce98          0xffffce98
+esi            0xffffcee0          -12576
+edi            0xf7f88000          -134709248
+eip            0x56556d9b          0x56556d9b <psu_thread_create+292>
+eflags         0x246               [ PF ZF IF ]
+cs             0x23                35
+ss             0x2b                43
+ds             0x2b                43
+es             0x2b                43
+fs             0x0                 0
+gs             0x63                99
+Stack level 0, frame at 0xffffcea0:
+ eip = 0x56556d9b in psu_thread_create (psu_thread.c:206); saved eip = 0x56556712
+ called by frame at 0xffffcee0
+ source language c.
+ Arglist at 0xffffce7c, args: user_func=0x56556614 <foo>, user_args=0x0
+ Locals at 0xffffce7c, Previous frame's sp is 0xffffcea0
+ Saved registers:
+  ebx at 0xffffce94, ebp at 0xffffce98, eip at 0xffffce9c
+$2 = {uc_flags = 0x0, uc_link = 0x0, uc_stack = {ss_sp = 0x5655a480, ss_flags = 0x0, ss_size = 0x2000}, uc_mcontext = {gregs = {0x0, 0x0, 0x0, 0x0, 0xf7f88000, 0xffffcee0, 0xffffce98, 0xffffce70, 0x56559f58, 0xffffca08, 0x0, 0x0, 0x0, 0x0, 0x56556cdd, 0x0, 0x0, 0x0, 
+      0x0}, fpregs = 0x5655a16c, oldmask = 0x0, cr2 = 0x0}, uc_sigmask = {__val = {0x0 <repeats 32 times>}}, __fpregs_mem = {cw = 0xffff037f, sw = 0xffff0000, tag = 0xffffffff, ipoff = 0x0, cssel = 0x0, dataoff = 0x0, datasel = 0xffff0000, _st = {{significand = {0x0, 
+          0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {
+        significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}}, status = 0x0}, __ssp = {0x0, 0x0, 0x0, 0x0}}
+$3 = 0xffffce98
+$4 = 0xffffce70
+$5 = 0x56556cdd
+$6 = {0x0 <repeats 2048 times>}
+207			if (n < 0) {
+212			else if (n < sizeof(int)) {
+217			if (getcontext(&uctx_foo) == -1) {
+eax            0x4                 4
+ecx            0x5655a064          1448452196
+edx            0x56559f58          1448451928
+ebx            0x56559f58          1448451928
+esp            0xffffce80          0xffffce80
+ebp            0xffffce98          0xffffce98
+esi            0xffffcee0          -12576
+edi            0xf7f88000          -134709248
+eip            0x56556e14          0x56556e14 <psu_thread_create+413>
+eflags         0x202               [ IF ]
+cs             0x23                35
+ss             0x2b                43
+ds             0x2b                43
+es             0x2b                43
+fs             0x0                 0
+gs             0x63                99
+Stack level 0, frame at 0xffffcea0:
+ eip = 0x56556e14 in psu_thread_create (psu_thread.c:217); saved eip = 0x56556712
+ called by frame at 0xffffcee0
+ source language c.
+ Arglist at 0xffffce7c, args: user_func=0x56556614 <foo>, user_args=0x0
+ Locals at 0xffffce7c, Previous frame's sp is 0xffffcea0
+ Saved registers:
+  ebx at 0xffffce94, ebp at 0xffffce98, eip at 0xffffce9c
+$7 = {uc_flags = 0x0, uc_link = 0x0, uc_stack = {ss_sp = 0x5655a480, ss_flags = 0x0, ss_size = 0x2000}, uc_mcontext = {gregs = {0x0, 0x0, 0x0, 0x0, 0xf7f88000, 0xffffcee0, 0xffffce98, 0xffffce70, 0x56559f58, 0xffffca08, 0x0, 0x0, 0x0, 0x0, 0x56556cdd, 0x0, 0x0, 0x0, 
+      0x0}, fpregs = 0x5655a16c, oldmask = 0x0, cr2 = 0x0}, uc_sigmask = {__val = {0x0 <repeats 32 times>}}, __fpregs_mem = {cw = 0xffff037f, sw = 0xffff0000, tag = 0xffffffff, ipoff = 0x0, cssel = 0x0, dataoff = 0x0, datasel = 0xffff0000, _st = {{significand = {0x0, 
+          0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {
+        significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}}, status = 0x0}, __ssp = {0x0, 0x0, 0x0, 0x0}}
+$8 = 0xffffce98
+$9 = 0xffffce70
+$10 = 0x56556cdd
+$11 = {0x0 <repeats 2048 times>}
+244			printf("%d\n", foo_offset);
+245			printf("%x\n", user_func);
+246			printf("%x\n", user_func + foo_offset);
+Dump of assembler code for function foo:
+   0x56556614 <+0>:	endbr32 
+   0x56556618 <+4>:	push   %ebp
+   0x56556619 <+5>:	mov    %esp,%ebp
+   0x5655661b <+7>:	push   %ebx
+   0x5655661c <+8>:	sub    $0x4,%esp
+   0x5655661f <+11>:	call   0x56556490 <__x86.get_pc_thunk.bx>
+   0x56556624 <+16>:	add    $0x3934,%ebx
+   0x5655662a <+22>:	sub    $0xc,%esp
+   0x5655662d <+25>:	push   $0x1c
+   0x5655662f <+27>:	call   0x5655658d <print_hostname>
+   0x56556634 <+32>:	add    $0x10,%esp
+   0x56556637 <+35>:	sub    $0xc,%esp
+   0x5655663a <+38>:	lea    -0x1f2a(%ebx),%eax
+   0x56556640 <+44>:	push   %eax
+   0x56556641 <+45>:	call   0x56556340 <puts@plt>
+   0x56556646 <+50>:	add    $0x10,%esp
+   0x56556649 <+53>:	sub    $0xc,%esp
+   0x5655664c <+56>:	lea    0x428(%ebx),%eax
+   0x56556652 <+62>:	push   %eax
+   0x56556653 <+63>:	call   0x56557046 <psu_thread_migrate>
+   0x56556658 <+68>:	add    $0x10,%esp
+   0x5655665b <+71>:	sub    $0xc,%esp
+   0x5655665e <+74>:	push   $0x1f
+   0x56556660 <+76>:	call   0x5655658d <print_hostname>
+   0x56556665 <+81>:	add    $0x10,%esp
+   0x56556668 <+84>:	sub    $0xc,%esp
+   0x5655666b <+87>:	lea    -0x1f1f(%ebx),%eax
+   0x56556671 <+93>:	push   %eax
+   0x56556672 <+94>:	call   0x56556340 <puts@plt>
+   0x56556677 <+99>:	add    $0x10,%esp
+   0x5655667a <+102>:	mov    $0x0,%eax
+   0x5655667f <+107>:	mov    -0x4(%ebp),%ebx
+   0x56556682 <+110>:	leave  
+   0x56556683 <+111>:	ret    
+End of assembler dump.
+249			makecontext(&uctx_foo, (void (*)(void)) user_func, 1, user_args);
+250			uctx_foo.uc_mcontext.gregs[EIP] = user_func + foo_offset;
+eax            0x0                 0
+ecx            0xf7de8d5f          -136409761
+edx            0x5655c46c          1448461420
+ebx            0x56559f58          1448451928
+esp            0xffffce80          0xffffce80
+ebp            0xffffce98          0xffffce98
+esi            0xffffcee0          -12576
+edi            0xf7f88000          -134709248
+eip            0x56556ec0          0x56556ec0 <psu_thread_create+585>
+eflags         0x282               [ SF IF ]
+cs             0x23                35
+ss             0x2b                43
+ds             0x2b                43
+es             0x2b                43
+fs             0x0                 0
+gs             0x63                99
+Stack level 0, frame at 0xffffcea0:
+ eip = 0x56556ec0 in psu_thread_create (psu_thread.c:250); saved eip = 0x56556712
+ called by frame at 0xffffcee0
+ source language c.
+ Arglist at 0xffffce7c, args: user_func=0x56556614 <foo>, user_args=0x0
+ Locals at 0xffffce7c, Previous frame's sp is 0xffffcea0
+ Saved registers:
+  ebx at 0xffffce94, ebp at 0xffffce98, eip at 0xffffce9c
+$12 = {uc_flags = 0x0, uc_link = 0x0, uc_stack = {ss_sp = 0x5655a480, ss_flags = 0x0, ss_size = 0x2000}, uc_mcontext = {gregs = {0x0, 0x0, 0x0, 0x0, 0xf7f88000, 0xffffcee0, 0xffffce98, 0x5655c46c, 0x1, 0x56559f58, 0x56559f58, 0x0, 0x0, 0x0, 0x56556614, 0x0, 0x0, 0x0, 
+      0x0}, fpregs = 0x5655a16c, oldmask = 0x0, cr2 = 0x0}, uc_sigmask = {__val = {0x0 <repeats 32 times>}}, __fpregs_mem = {cw = 0xffff037f, sw = 0xffff0000, tag = 0xffffffff, ipoff = 0x0, cssel = 0x0, dataoff = 0x0, datasel = 0xffff0000, _st = {{significand = {0x0, 
+          0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {
+        significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}}, status = 0x0}, __ssp = {0x0, 0x0, 0x0, 0x0}}
+$13 = 0xffffce98
+$14 = 0x5655c46c
+$15 = 0x56556614
+$16 = {0x0 <repeats 2043 times>, 0xf7de8d5f, 0x0, 0x0, 0x0, 0x0}
+$17 = 0x5655c46c
+251			uctx_foo.uc_mcontext.gregs[EBP] = (int *) uctx_foo.uc_stack.ss_sp + (uctx_foo.uc_stack.ss_size / 4) - 1;
+253			printf("Stack data-\n");
+$18 = {uc_flags = 0x0, uc_link = 0x0, uc_stack = {ss_sp = 0x5655a480, ss_flags = 0x0, ss_size = 0x2000}, uc_mcontext = {gregs = {0x0, 0x0, 0x0, 0x0, 0xf7f88000, 0xffffcee0, 0x5655c47c, 0x5655c46c, 0x1, 0x56559f58, 0x56559f58, 0x0, 0x0, 0x0, 0x56556658, 0x0, 0x0, 0x0, 
+      0x0}, fpregs = 0x5655a16c, oldmask = 0x0, cr2 = 0x0}, uc_sigmask = {__val = {0x0 <repeats 32 times>}}, __fpregs_mem = {cw = 0xffff037f, sw = 0xffff0000, tag = 0xffffffff, ipoff = 0x0, cssel = 0x0, dataoff = 0x0, datasel = 0xffff0000, _st = {{significand = {0x0, 
+          0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {
+        significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}}, status = 0x0}, __ssp = {0x0, 0x0, 0x0, 0x0}}
+$19 = 0x5655c47c
+$20 = 0x5655c46c
+$21 = 0x56556658
+Breakpoint 2 at 0x56557002: file psu_thread.c, line 264.
+Continuing.
+
+Breakpoint 2, psu_thread_create (user_func=0x56556614 <foo>, user_args=0x0) at psu_thread.c:264
+264			if (swapcontext(&uctx_main, &uctx_foo) == -1) {
+eax            0xa                 10
+ecx            0xffffffff          -1
+edx            0xffffffff          -1
+ebx            0x56559f58          1448451928
+esp            0xffffce80          0xffffce80
+ebp            0xffffce98          0xffffce98
+esi            0xffffcee0          -12576
+edi            0xf7f88000          -134709248
+eip            0x56557002          0x56557002 <psu_thread_create+907>
+eflags         0x282               [ SF IF ]
+cs             0x23                35
+ss             0x2b                43
+ds             0x2b                43
+es             0x2b                43
+fs             0x0                 0
+gs             0x63                99
+Stack level 0, frame at 0xffffcea0:
+ eip = 0x56557002 in psu_thread_create (psu_thread.c:264); saved eip = 0x56556712
+ called by frame at 0xffffcee0
+ source language c.
+ Arglist at 0xffffce7c, args: user_func=0x56556614 <foo>, user_args=0x0
+ Locals at 0xffffce7c, Previous frame's sp is 0xffffcea0
+ Saved registers:
+  ebx at 0xffffce94, ebp at 0xffffce98, eip at 0xffffce9c
+Breakpoint 3 at 0x5655665b: file app1.c, line 31.
+Continuing.
+
+Breakpoint 3, foo (arg=0x0) at app1.c:31
+31	  print_hostname(__LINE__);
+eax            0x0                 0
+ecx            0x56559f58          1448451928
+edx            0x56559f58          1448451928
+ebx            0x1                 1
+esp            0x5655c47c          0x5655c47c <foo_stack+8188>
+ebp            0x5655c47c          0x5655c47c <foo_stack+8188>
+esi            0xffffcee0          -12576
+edi            0xf7f88000          -134709248
+eip            0x5655665b          0x5655665b <foo+71>
+eflags         0x202               [ IF ]
+cs             0x23                35
+ss             0x2b                43
+ds             0x2b                43
+es             0x2b                43
+fs             0x0                 0
+gs             0x63                99
+Stack level 0, frame at 0x5655c484:
+ eip = 0x5655665b in foo (app1.c:31); saved eip = 0x800
+ called by frame at 0x0
+ source language c.
+ Arglist at 0x5655c478, args: arg=0x0
+ Locals at 0x5655c478, Previous frame's sp is 0x5655c484
+ Saved registers:
+  ebx at 0x5655c478, ebp at 0x5655c47c, eip at 0x5655c480
+$22 = {uc_flags = 0x0, uc_link = 0x0, uc_stack = {ss_sp = 0x5655a480, ss_flags = 0x0, ss_size = 0x2000}, uc_mcontext = {gregs = {0x0, 0x0, 0x0, 0x0, 0xf7f88000, 0xffffcee0, 0x5655c47c, 0x5655c46c, 0x1, 0x56559f58, 0x56559f58, 0x0, 0x0, 0x0, 0x56556658, 0x0, 0x0, 0x0, 
+      0x0}, fpregs = 0x5655a16c, oldmask = 0x0, cr2 = 0x0}, uc_sigmask = {__val = {0x0 <repeats 32 times>}}, __fpregs_mem = {cw = 0xffff037f, sw = 0xffff0000, tag = 0xffffffff, ipoff = 0x0, cssel = 0x0, dataoff = 0x0, datasel = 0xffff0000, _st = {{significand = {0x0, 
+          0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {
+        significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}}, status = 0x0}, __ssp = {0x0, 0x0, 0x0, 0x0}}
+$23 = 0x5655c47c
+$24 = 0x5655c46c
+$25 = 0x56556658
+$26 = {0x0 <repeats 2042 times>, 0x56556658, 0xf7de8d5f, 0x0, 0x0, 0x0, 0x0}
+print_hostname (lineno=31) at app1.c:16
+16	{
+eax            0x0                 0
+ecx            0x56559f58          1448451928
+edx            0x56559f58          1448451928
+ebx            0x1                 1
+esp            0x5655c468          0x5655c468 <foo_stack+8168>
+ebp            0x5655c47c          0x5655c47c <foo_stack+8188>
+esi            0xffffcee0          -12576
+edi            0xf7f88000          -134709248
+eip            0x5655658d          0x5655658d <print_hostname>
+eflags         0x202               [ IF ]
+cs             0x23                35
+ss             0x2b                43
+ds             0x2b                43
+es             0x2b                43
+fs             0x0                 0
+gs             0x63                99
+Stack level 0, frame at 0x5655c46c:
+ eip = 0x5655658d in print_hostname (app1.c:16); saved eip = 0x56556665
+ called by frame at 0x5655c484
+ source language c.
+ Arglist at 0x5655c464, args: lineno=31
+ Locals at 0x5655c464, Previous frame's sp is 0x5655c46c
+ Saved registers:
+  eip at 0x5655c468
+$27 = {uc_flags = 0x0, uc_link = 0x0, uc_stack = {ss_sp = 0x5655a480, ss_flags = 0x0, ss_size = 0x2000}, uc_mcontext = {gregs = {0x0, 0x0, 0x0, 0x0, 0xf7f88000, 0xffffcee0, 0x5655c47c, 0x5655c46c, 0x1, 0x56559f58, 0x56559f58, 0x0, 0x0, 0x0, 0x56556658, 0x0, 0x0, 0x0, 
+      0x0}, fpregs = 0x5655a16c, oldmask = 0x0, cr2 = 0x0}, uc_sigmask = {__val = {0x0 <repeats 32 times>}}, __fpregs_mem = {cw = 0xffff037f, sw = 0xffff0000, tag = 0xffffffff, ipoff = 0x0, cssel = 0x0, dataoff = 0x0, datasel = 0xffff0000, _st = {{significand = {0x0, 
+          0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {
+        significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}}, status = 0x0}, __ssp = {0x0, 0x0, 0x0, 0x0}}
+$28 = 0x5655c47c
+$29 = 0x5655c46c
+$30 = 0x56556658
+$31 = {0x0 <repeats 2042 times>, 0x56556665, 0x1f, 0x0, 0x0, 0x0, 0x0}
+19	  if ((ret = gethostname(buffer, sizeof(buffer))) == -1) {
+Breakpoint 4 at 0x565565e4: file app1.c, line 23.
+Continuing.
+
+Breakpoint 4, print_hostname (lineno=31) at app1.c:23
+23	  printf("Hostname: %s, lineno: %d\n", buffer, lineno);
+eax            0x0                 0
+ecx            0x0                 0
+edx            0x353135            3486005
+ebx            0x56559f58          1448451928
+esp            0x5655c3ec          0x5655c3ec <foo_stack+8044>
+ebp            0x5655c464          0x5655c464 <foo_stack+8164>
+esi            0xffffcee0          -12576
+edi            0xf7f88000          -134709248
+eip            0x565565e4          0x565565e4 <print_hostname+87>
+eflags         0x213               [ CF AF IF ]
+cs             0x23                35
+ss             0x2b                43
+ds             0x2b                43
+es             0x2b                43
+fs             0x0                 0
+gs             0x63                99
+Stack level 0, frame at 0x5655c46c:
+ eip = 0x565565e4 in print_hostname (app1.c:23); saved eip = 0x56556665
+ called by frame at 0x5655c484
+ source language c.
+ Arglist at 0x5655c3e8, args: lineno=31
+ Locals at 0x5655c3e8, Previous frame's sp is 0x5655c46c
+ Saved registers:
+  ebx at 0x5655c460, ebp at 0x5655c464, eip at 0x5655c468
+$32 = {uc_flags = 0x0, uc_link = 0x0, uc_stack = {ss_sp = 0x5655a480, ss_flags = 0x0, ss_size = 0x2000}, uc_mcontext = {gregs = {0x0, 0x0, 0x0, 0x0, 0xf7f88000, 0xffffcee0, 0x5655c47c, 0x5655c46c, 0x1, 0x56559f58, 0x56559f58, 0x0, 0x0, 0x0, 0x56556658, 0x0, 0x0, 0x0, 
+      0x0}, fpregs = 0x5655a16c, oldmask = 0x0, cr2 = 0x0}, uc_sigmask = {__val = {0x0 <repeats 32 times>}}, __fpregs_mem = {cw = 0xffff037f, sw = 0xffff0000, tag = 0xffffffff, ipoff = 0x0, cssel = 0x0, dataoff = 0x0, datasel = 0xffff0000, _st = {{significand = {0x0, 
+          0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {
+        significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}, {significand = {0x0, 0x0, 0x0, 0x0}, exponent = 0x0}}, status = 0x0}, __ssp = {0x0, 0x0, 0x0, 0x0}}
+$33 = 0x5655c47c
+$34 = 0x5655c46c
+$35 = 0x56556658
+$36 = {0x0 <repeats 1886 times>, 0x5655c3f4, 0x56559f58, 0x56559f58, 0xf7e6cd16, 0xf7e9fdd6, 0x5655c273, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xf7f88000, 0x0, 0x694c0000, 0x78756e, 0x0 <repeats 14 times>, 0x4e000000, 0x6d617269, 0x492d7961, 0x6970736e, 0x2d6e6f72, 0x35313535, 
+  0x0 <repeats 11 times>, 0x31312e35, 0x322d302e, 0x65672d37, 0x6972656e, 0x63, 0x0 <repeats 11 times>, 0x39322300, 0x2e30327e, 0x312e3430, 0x7562552d, 0x2075746e, 0x20504d53, 0x20646557, 0x20677541, 0x31203131, 0x38353a35, 0x2037313a, 0x20435455, 0x31323032, 0x0, 0x0, 
+  0x0, 0x38780000, 0x34365f36, 0x0 <repeats 14 times>, 0x28000000, 0x656e6f6e, 0x29, 0x0 <repeats 14 times>, 0xd2c87200, 0x0, 0x0, 0x0, 0x56559f58, 0xffffcee0, 0xf7f88000, 0x5655c464, 0x565565bc, 0x5655c3f4, 0x64, 0x0, 0x5655659d, 0x0, 0x0, 0x6172694e, 0x2d79616d, 
+  0x70736e49, 0x6e6f7269, 0x3135352d, 0x35, 0x0 <repeats 19 times>, 0xd2c87200, 0x0, 0x1, 0x5655c47c, 0x56556665, 0x1f, 0x0, 0x0, 0x0, 0x0}
+$37 = 0x5655c47c
+$38 = 0x5655c464
+$39 = 2041
+Dump of assembler code for function print_hostname:
+   0x5655658d <+0>:	endbr32 
+   0x56556591 <+4>:	push   %ebp
+   0x56556592 <+5>:	mov    %esp,%ebp
+   0x56556594 <+7>:	push   %ebx
+   0x56556595 <+8>:	sub    $0x74,%esp
+   0x56556598 <+11>:	call   0x56556490 <__x86.get_pc_thunk.bx>
+   0x5655659d <+16>:	add    $0x39bb,%ebx
+   0x565565a3 <+22>:	mov    %gs:0x14,%eax
+   0x565565a9 <+28>:	mov    %eax,-0xc(%ebp)
+   0x565565ac <+31>:	xor    %eax,%eax
+   0x565565ae <+33>:	sub    $0x8,%esp
+   0x565565b1 <+36>:	push   $0x64
+   0x565565b3 <+38>:	lea    -0x70(%ebp),%eax
+   0x565565b6 <+41>:	push   %eax
+   0x565565b7 <+42>:	call   0x56556330 <gethostname@plt>
+   0x565565bc <+47>:	add    $0x10,%esp
+   0x565565bf <+50>:	mov    %eax,-0x74(%ebp)
+   0x565565c2 <+53>:	cmpl   $0xffffffff,-0x74(%ebp)
+   0x565565c6 <+57>:	jne    0x565565e4 <print_hostname+87>
+   0x565565c8 <+59>:	sub    $0xc,%esp
+   0x565565cb <+62>:	lea    -0x1f50(%ebx),%eax
+   0x565565d1 <+68>:	push   %eax
+   0x565565d2 <+69>:	call   0x565562f0 <perror@plt>
+   0x565565d7 <+74>:	add    $0x10,%esp
+   0x565565da <+77>:	sub    $0xc,%esp
+   0x565565dd <+80>:	push   $0x1
+   0x565565df <+82>:	call   0x56556350 <exit@plt>
+=> 0x565565e4 <+87>:	sub    $0x4,%esp
+   0x565565e7 <+90>:	pushl  0x8(%ebp)
+   0x565565ea <+93>:	lea    -0x70(%ebp),%eax
+   0x565565ed <+96>:	push   %eax
+   0x565565ee <+97>:	lea    -0x1f44(%ebx),%eax
+   0x565565f4 <+103>:	push   %eax
+   0x565565f5 <+104>:	call   0x56556280 <printf@plt>
+   0x565565fa <+109>:	add    $0x10,%esp
+   0x565565fd <+112>:	nop
+   0x565565fe <+113>:	mov    -0xc(%ebp),%eax
+   0x56556601 <+116>:	xor    %gs:0x14,%eax
+   0x56556608 <+123>:	je     0x5655660f <print_hostname+130>
+   0x5655660a <+125>:	call   0x565572f0 <__stack_chk_fail_local>
+   0x5655660f <+130>:	mov    -0x4(%ebp),%ebx
+   0x56556612 <+133>:	leave  
+   0x56556613 <+134>:	ret    
+End of assembler dump.
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x56556344 in puts@plt ()
