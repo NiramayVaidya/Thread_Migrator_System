@@ -7,35 +7,21 @@
 
 #include "psu_thread.h"
 
-int g_mode = -1;
-int g_port = -1;
-int socket_fd = -1;
-int n = -1;
-
-static const char *msg = "client_msg";
-char server_buf[16];
-int i;
-
-int g_eip_offset = 0;
-int foo_offset = 0;
-void (*foo_func)(void);
-
 static const char *filename = "server_sock_info.in";
 static const char *hostname_token = "hostname: ";
 static const char *port_token = "port: ";
 static const char *delim = ": ";
 
-static ucontext_t uctx_foo, uctx_main;
-int foo_stack[SIGSTKSZ / 4];
+int n = -1, i = 0, user_func_offset = 0;
 
-char remote_hostname[HOST_NAME_MAX];
+static ucontext_t uctx_curr;
+
+psu_thread_info_t thread_info;
 
 static void error(const char *msg) {
 	perror(msg);
 	exit(0);
 }
-
-psu_thread_info_t thread_info;
 
 static void get_server_socket_info(void) {
 		FILE *server_sock_info_fp = fopen(filename, "r");
@@ -129,10 +115,10 @@ void psu_thread_setup_init(int mode) {
 	}
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(g_port);
+	serv_addr.sin_port = htons(thread_info.port);
 
 	if (!mode) {
-		server = gethostbyname(remote_hostname);
+		server = gethostbyname(thread_info.hostname);
 		if (server == NULL) {
 #if ERROR_LEVEL
 			fprintf(stderr, "No such host\n");
@@ -145,22 +131,16 @@ void psu_thread_setup_init(int mode) {
 			error("Connection failed\n");
 #endif
 		}
-		socket_fd = sockfd;
+		thread_info.sock_fd = sockfd;
 	}
 	else if (mode == 1) {
-		sockfd = socket(AF_INET, SOCK_STREAM, 0);
-		if (sockfd < 0) {
-#if ERROR_LEVEL
-			error("Socket open failed\n");
-#endif
-		}
 		serv_addr.sin_addr.s_addr = INADDR_ANY;
 		if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
 #if ERROR_LEVEL
 			error("Bind failed\n");
 #endif
 		}
-		listen(sockfd,5);
+		listen(sockfd, 5);
 		clilen = sizeof(cli_addr);
 		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 		if (newsockfd < 0) {
@@ -168,7 +148,7 @@ void psu_thread_setup_init(int mode) {
 			error("Accept failed\n");
 #endif
 		}
-		socket_fd = newsockfd;
+		thread_info.sock_fd = newsockfd;
 	}
 	else {
 #if ERROR_LEVEL
@@ -176,7 +156,7 @@ void psu_thread_setup_init(int mode) {
 #endif
 		exit(0);
 	}
-	g_mode = mode;
+	thread_info.mode = mode;
 	return;
 }
 
@@ -184,25 +164,26 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 	// make thread related setup
 	// create thread and start running the function based on *user_func
 	
-	foo_func = (void (*)(void)) user_func;
-	printf("foo_func- %x\n", foo_func);
-	printf("user_func- %x\n", user_func);
-	if (getcontext(&uctx_foo) == -1) {
+	thread_info.user_func = (void (*)(void)) user_func;
+#if DEBUG_LEVEL
+	printf("thread info user_func- %x\n", (unsigned int) thread_info.user_func);
+	printf("user_func- %x\n", (unsigned int) user_func);
+#endif
+	if (getcontext(&thread_info.uctx_user_func) == -1) {
 #if ERROR_LEVEL
-		error("Get context in main failed\n");
+		error("Get context in psu thread create failed\n");
 #endif
 	}
-	uctx_foo.uc_stack.ss_sp = foo_stack;
-	uctx_foo.uc_stack.ss_size = sizeof(foo_stack);
-	if (!g_mode) {
-		makecontext(&uctx_foo, foo_func, 1, user_args);
-		if (swapcontext(&uctx_main, &uctx_foo) == -1) {
-			error("Swap context from main to foo in main thread failed\n");
+	thread_info.uctx_user_func.uc_stack.ss_sp = thread_info.user_func_stack;
+	thread_info.uctx_user_func.uc_stack.ss_size = sizeof(thread_info.user_func_stack);
+	if (!thread_info.mode) {
+		makecontext(&thread_info.uctx_user_func, thread_info.user_func, 1, user_args);
+		if (swapcontext(&uctx_curr, &thread_info.uctx_user_func) == -1) {
+			error("Swap context from current context to user_func in psu thread create failed\n");
 		}
 	}
-	else if (g_mode == 1) {
-		// n = read(socket_fd, &g_eip_offset, sizeof(int));
-		n = read(socket_fd, &foo_offset, sizeof(int));
+	else if (thread_info.mode == 1) {
+		n = read(thread_info.sock_fd, &user_func_offset, sizeof(int));
 		if (n < 0) {
 #if ERROR_LEVEL
 			error("Read from socket failed\n");
@@ -213,55 +194,46 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 			fprintf(stdout, "%d: Read less number of bytes from the socket than expected\n", __LINE__);
 #endif
 		}
-		if (getcontext(&uctx_foo) == -1) {
+		if (getcontext(&thread_info.uctx_user_func) == -1) {
 #if ERROR_LEVEL
-			error("Get context in main failed\n");
+			error("Get context in psu thread create failed\n");
 #endif
 		}
 #if DEBUG_LEVEL
 		/*
 		printf("Stack data-\n");
 		for (i = 0; i < SIGSTKSZ / 4; i++) {
-			printf("%x\t", foo_stack[i]);
+			printf("%d : %x\t", i, thread_info.user_func_stack[i]);
 		}
 		printf("Stack addresses-\n");
 		for (i = 0; i < SIGSTKSZ / 4; i++) {
-			printf("%x\t", &foo_stack[i]);
+			printf("%d : %x\t", &thread_info.user_func_stack[i]);
 		}
 		printf("\n");
-		// printf("%u\n", sizeof(size_t));
 		*/
 #endif
-		// printf("%d\n", g_eip_offset);
-		// printf("%x\n", ((int *) uctx_foo.uc_stack.ss_sp)[g_eip_offset / 4]);
-		// printf("%x\n", user_func);
-		// printf("%x\n", user_func + g_eip_offset / 4);
-		// makecontext(&uctx_foo, (void (*)(void)) user_func, 1, user_args);
-		// uctx_foo.uc_mcontext.gregs[EIP] = user_func + g_eip_offset / 4 + 1;
-		// makecontext(&uctx_foo, (void (*)(void)) user_func + foo_offset, 1, user_args);
-
-		printf("%d\n", foo_offset);
-		printf("%x\n", user_func);
-		printf("%x\n", user_func + foo_offset);
-		// uctx_foo.uc_mcontext.gregs[EIP] = user_func + foo_offset;
-		// makecontext(&uctx_foo, (void (*)(void)) user_func + foo_offset, 1, user_args);
-		makecontext(&uctx_foo, (void (*)(void)) user_func, 1, user_args);
-		uctx_foo.uc_mcontext.gregs[EIP] = user_func + foo_offset;
-		uctx_foo.uc_mcontext.gregs[EBP] = (int *) uctx_foo.uc_stack.ss_sp + (uctx_foo.uc_stack.ss_size / 4) - 1;
 #if DEBUG_LEVEL
-		printf("Stack data-\n");
+		printf("user func offset- %d\n", user_func_offset);
+		printf("user func- %x\n", (unsigned int) user_func);
+		printf("user func + user func offset- %x\n", (unsigned int) user_func + user_func_offset);
+#endif
+		// makecontext(&thread_info.uctx_user_func, (void (*)(void)) user_func + user_func_offset, 1, user_args);
+		makecontext(&thread_info.uctx_user_func, (void (*)(void)) user_func, 1, user_args);
+		thread_info.uctx_user_func.uc_mcontext.gregs[EIP] = user_func + user_func_offset;
+		thread_info.uctx_user_func.uc_mcontext.gregs[EBP] = (int *) thread_info.uctx_user_func.uc_stack.ss_sp + (thread_info.uctx_user_func.uc_stack.ss_size / 4) - 1;
+#if DEBUG_LEVEL
+		printf("User func stack data-\n");
 		for (i = 0; i < SIGSTKSZ / 4; i++) {
-			printf("%x\t", foo_stack[i]);
+			printf("%d : %x\t", i, thread_info.user_func_stack[i]);
 		}
-		printf("Stack addresses-\n");
+		printf("User func stack addresses-\n");
 		for (i = 0; i < SIGSTKSZ / 4; i++) {
-			printf("%x\t", &foo_stack[i]);
+			printf("%d : %x\t", i, (unsigned int) &thread_info.user_func_stack[i]);
 		}
 		printf("\n");
-		// printf("%u\n", sizeof(size_t));
 #endif
-		if (swapcontext(&uctx_main, &uctx_foo) == -1) {
-			error("Swap context from main to foo in main thread failed\n");
+		if (swapcontext(&uctx_curr, &thread_info.uctx_user_func) == -1) {
+			error("Swap context from current context to user func in psu thread create failed\n");
 		}
 	}
 	return 0; 
@@ -270,10 +242,10 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 void psu_thread_migrate(const char *hostname) {
 	// thread migration related code
 
-	if (!g_mode) {
-		if (getcontext(&uctx_foo) == -1) {
+	if (!thread_info.mode) {
+		if (getcontext(&thread_info.uctx_user_func) == -1) {
 #if ERROR_LEVEL
-			error("Get context in main failed\n");
+			error("Get context in psu thread migrate failed\n");
 #endif
 		}
 #if DEBUG_LEVEL
@@ -291,23 +263,23 @@ void psu_thread_migrate(const char *hostname) {
 		*/
 #endif
 #if DEBUG_LEVEL
-		printf("%x\n", uctx_foo.uc_mcontext.gregs[EBP]);
-		printf("%x\n", uctx_foo.uc_stack.ss_sp);
+		printf("ebp- %x\n", thread_info.uctx_user_func.uc_mcontext.gregs[EBP]);
+		printf("ss_sp- %x\n", thread_info.uctx_user_func.uc_stack.ss_sp);
 
-		int ebp_offset = uctx_foo.uc_mcontext.gregs[EBP] - (unsigned int) uctx_foo.uc_stack.ss_sp;
-		printf("%d\n", ebp_offset);
+		int ebp_offset = thread_info.uctx_user_func.uc_mcontext.gregs[EBP] - (unsigned int) thread_info.uctx_user_func.uc_stack.ss_sp;
+		printf("ebp offset- %d\n", ebp_offset);
 
 		int eip_offset = ebp_offset + 4;
 		int eip_stack_index = ebp_offset / 4 + 1;
-		printf("%d\n", eip_offset);
-		printf("%d\n", eip_stack_index);
-		int eip_value = ((int *) uctx_foo.uc_stack.ss_sp)[eip_stack_index];
-		printf("%x\n", foo_func);
-		printf("%x\n", eip_value);
-		int foo_offset = eip_value - (unsigned int) foo_func;
-		printf("%d\n", foo_offset);
+		printf("eip offset- %d\n", eip_offset);
+		printf("eip stack index- %d\n", eip_stack_index);
+		int eip_value = ((int *) thread_info.uctx_user_func.uc_stack.ss_sp)[eip_stack_index];
+		printf("user func- %x\n", (unsigned int) thread_info.user_func);
+		printf("eip value- %x\n", eip_value);
+		user_func_offset = eip_value - (unsigned int) thread_info.user_func;
+		printf("user func offset- %d\n", user_func_offset);
 #endif
-		n = write(socket_fd, &foo_offset, sizeof(int));
+		n = write(thread_info.sock_fd, &user_func_offset, sizeof(int));
 		if (n < 0) {
 #if ERROR_LEVEL
 			error("Write to socket failed\n");
