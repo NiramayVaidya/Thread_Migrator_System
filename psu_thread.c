@@ -265,18 +265,30 @@ void psu_thread_migrate(const char *hostname) {
 #if DEBUG_LEVEL
 		printf("ebp- %x\n", thread_info.uctx_user_func.uc_mcontext.gregs[EBP]);
 		printf("ss_sp- %x\n", thread_info.uctx_user_func.uc_stack.ss_sp);
+#endif
 
 		int ebp_offset = thread_info.uctx_user_func.uc_mcontext.gregs[EBP] - (unsigned int) thread_info.uctx_user_func.uc_stack.ss_sp;
+#if DEBUG_LEVEL
 		printf("ebp offset- %d\n", ebp_offset);
+#endif
 
 		int eip_offset = ebp_offset + 4;
 		int eip_stack_index = ebp_offset / 4 + 1;
+
+#if DEBUG_LEVEL
 		printf("eip offset- %d\n", eip_offset);
 		printf("eip stack index- %d\n", eip_stack_index);
+#endif
 		int eip_value = ((int *) thread_info.uctx_user_func.uc_stack.ss_sp)[eip_stack_index];
+
+#if DEBUG_LEVEL
 		printf("user func- %x\n", (unsigned int) thread_info.user_func);
 		printf("eip value- %x\n", eip_value);
+#endif
+
 		user_func_offset = eip_value - (unsigned int) thread_info.user_func;
+
+#if DEBUG_LEVEL
 		printf("user func offset- %d\n", user_func_offset);
 #endif
 		n = write(thread_info.sock_fd, &user_func_offset, sizeof(int));
