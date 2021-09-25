@@ -220,7 +220,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		// makecontext(&thread_info.uctx_user_func, (void (*)(void)) user_func + user_func_offset, 1, user_args);
 		makecontext(&thread_info.uctx_user_func, (void (*)(void)) user_func, 1, user_args);
 		thread_info.uctx_user_func.uc_mcontext.gregs[EIP] = user_func + user_func_offset;
-		thread_info.uctx_user_func.uc_mcontext.gregs[EBP] = (int *) thread_info.uctx_user_func.uc_stack.ss_sp + (thread_info.uctx_user_func.uc_stack.ss_size / 4) - 1;
+		// thread_info.uctx_user_func.uc_mcontext.gregs[EBP] = (int *) thread_info.uctx_user_func.uc_stack.ss_sp + (thread_info.uctx_user_func.uc_stack.ss_size / 4) - 1;
 #if DEBUG_LEVEL
 		printf("User func stack data-\n");
 		for (i = 0; i < SIGSTKSZ / 4; i++) {
