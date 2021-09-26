@@ -27,8 +27,8 @@
 #define UESP 17
 #endif
 
-#define DEBUG_LEVEL 0
-#define INFO_LEVEL 0
+#define DEBUG_LEVEL 1 
+#define INFO_LEVEL 1
 #define WARN_LEVEL 1
 #define ERROR_LEVEL 1
 
