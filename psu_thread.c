@@ -258,7 +258,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		write_ack(thread_info.sock_fd, __LINE__);
 #if DEBUG_LEVEL
 		printf("received stack-\n");
-		for (i = 0; i < received_stack_size / 4; i++) {
+		for (int i = 0; i < received_stack_size / 4; i++) {
 			printf("%x\t", received_stack[i]);
 		}
 		printf("\n");
@@ -317,7 +317,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / 4 - 3] = prev_eip;
 #if DEBUG_LEVEL
 		printf("user func stack-\n");
-		for (i = (thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / 4; i < thread_info.uctx_user_func.uc_stack.ss_size / 4; i++) {
+		for (int i = (thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / 4; i < thread_info.uctx_user_func.uc_stack.ss_size / 4; i++) {
 			printf("%x\t", thread_info.user_func_stack[i]);
 		}
 		printf("\n");
@@ -449,7 +449,7 @@ void psu_thread_migrate(const char *hostname) {
 		}
 #if DEBUG_LEVEL
 		printf("prev frame stack-\n");
-		for (i = prev_frame_esp_stack_index; i < thread_info.uctx_user_func.uc_stack.ss_size / 4; i++) {
+		for (int i = prev_frame_esp_stack_index; i < thread_info.uctx_user_func.uc_stack.ss_size / 4; i++) {
 			printf("%x\t", thread_info.user_func_stack[i]);
 		}
 		printf("\n");
