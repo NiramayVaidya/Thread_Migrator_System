@@ -13,10 +13,6 @@ static const char *hostname_token = "hostname: ";
 static const char *port_token = "port: ";
 static const char *delim = ": ";
 
-int n = -1, i = 0, j = 0, user_func_offset = 0;
-int ack = 0;
-int prev_frame_ebp_stack_index = -1;
-
 static ucontext_t uctx_curr;
 
 psu_thread_info_t thread_info;
@@ -102,6 +98,7 @@ static void get_server_socket_info(void) {
 }
 
 void read_ack(int sock_fd, int debug_lineno) {
+	int n = -1, ack = 0; 
 	n = read(sock_fd, &ack, sizeof(int));
 	if (n < 0) {
 #if ERROR_LEVEL
@@ -116,7 +113,7 @@ void read_ack(int sock_fd, int debug_lineno) {
 }
 
 void write_ack(int sock_fd, int debug_lineno) {
-	ack = 1;
+	int n = -1, ack = 1;
 	n = write(sock_fd, &ack, sizeof(int));
 	if (n < 0) {
 #if ERROR_LEVEL
@@ -131,8 +128,6 @@ void write_ack(int sock_fd, int debug_lineno) {
 }
 
 void psu_thread_setup_init(int mode) {
-	// read from a file to set up the socket connection between the client and the server
-	
 	int sockfd, newsockfd, portno;
 	socklen_t clilen;
 	struct sockaddr_in serv_addr, cli_addr;
@@ -193,9 +188,7 @@ void psu_thread_setup_init(int mode) {
 }
 
 int psu_thread_create(void *(*user_func)(void *), void *user_args) {
-	// make thread related setup
-	// create thread and start running the function based on *user_func
-	
+	int n = -1, user_func_offset = 0, prev_frame_ebp_stack_index = -1;
 	thread_info.user_func = (void (*)(void)) user_func;
 #if DEBUG_LEVEL
 	printf("thread info user_func- %x\n", (unsigned int) thread_info.user_func);
@@ -292,11 +285,11 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #if DEBUG_LEVEL
 		/*
 		printf("Stack data-\n");
-		for (i = 0; i < SIGSTKSZ / 4; i++) {
+		for (int i = 0; i < SIGSTKSZ / 4; i++) {
 			printf("%d : %x\t", i, thread_info.user_func_stack[i]);
 		}
 		printf("Stack addresses-\n");
-		for (i = 0; i < SIGSTKSZ / 4; i++) {
+		for (int i = 0; i < SIGSTKSZ / 4; i++) {
 			printf("%d : %x\t", &thread_info.user_func_stack[i]);
 		}
 		printf("\n");
@@ -317,7 +310,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #if DEBUG_LEVEL
 		printf("prev eip- %x\n", prev_eip);
 #endif
-		for (i = thread_info.uctx_user_func.uc_stack.ss_size / 4 - 1, j = received_stack_size / 4 - 1; i >= (thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / 4, j >= 0; i--, j--) {
+		for (int i = thread_info.uctx_user_func.uc_stack.ss_size / 4 - 1, j = received_stack_size / 4 - 1; i >= (thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / 4, j >= 0; i--, j--) {
 			thread_info.user_func_stack[i] = received_stack[j];
 		}
 		thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / 4 - 3] = prev_eip;
@@ -336,11 +329,11 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #if DEBUG_LEVEL
 		/*
 		printf("User func stack data-\n");
-		for (i = 0; i < SIGSTKSZ / 4; i++) {
+		for (int i = 0; i < SIGSTKSZ / 4; i++) {
 			printf("%d : %x\t", i, thread_info.user_func_stack[i]);
 		}
 		printf("User func stack addresses-\n");
-		for (i = 0; i < SIGSTKSZ / 4; i++) {
+		for (int i = 0; i < SIGSTKSZ / 4; i++) {
 			printf("%d : %x\t", i, (unsigned int) &thread_info.user_func_stack[i]);
 		}
 		printf("\n");
@@ -354,8 +347,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 }
 
 void psu_thread_migrate(const char *hostname) {
-	// thread migration related code
-
+	int n = -1, user_func_offset = 0, ack = 0;
 	if (!thread_info.mode) {
 		if (getcontext(&thread_info.uctx_user_func) == -1) {
 #if ERROR_LEVEL
@@ -365,11 +357,11 @@ void psu_thread_migrate(const char *hostname) {
 #if DEBUG_LEVEL
 		/*
 		printf("Stack data-\n");
-		for (i = 0; i < SIGSTKSZ / 4; i++) {
+		for (int i = 0; i < SIGSTKSZ / 4; i++) {
 			printf("%x\t", foo_stack[i]);
 		}
 		printf("Stack addresses-\n");
-		for (i = 0; i < SIGSTKSZ / 4; i++) {
+		for (int i = 0; i < SIGSTKSZ / 4; i++) {
 			printf("%x\t", &foo_stack[i]);
 		}
 		printf("\n");
