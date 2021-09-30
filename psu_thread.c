@@ -97,7 +97,7 @@ static void get_server_socket_info(void) {
 		}
 }
 
-void read_ack(int sock_fd, int debug_lineno) {
+int read_ack(int sock_fd, int debug_lineno) {
 	int n = -1, ack = 0; 
 	n = read(sock_fd, &ack, sizeof(int));
 	if (n < 0) {
@@ -110,6 +110,7 @@ void read_ack(int sock_fd, int debug_lineno) {
 		fprintf(stdout, "%d: Read less number of bytes from the socket than expected\n", debug_lineno);
 #endif
 	}
+	return ack;
 }
 
 void write_ack(int sock_fd, int debug_lineno) {
@@ -408,7 +409,7 @@ void psu_thread_migrate(const char *hostname) {
 			fprintf(stdout, "%d: Written less number of bytes to the socket than expected\n", __LINE__);
 #endif
 		}
-		read_ack(thread_info.sock_fd, __LINE__);
+		ack = read_ack(thread_info.sock_fd, __LINE__);
 		if (ack == 1) {
 #if INFO_LEVEL
 			printf("ACK for EIP received\n");
@@ -435,7 +436,7 @@ void psu_thread_migrate(const char *hostname) {
 			fprintf(stdout, "%d: Written less number of bytes to the socket than expected\n", __LINE__);
 #endif
 		}
-		read_ack(thread_info.sock_fd, __LINE__);
+		ack = read_ack(thread_info.sock_fd, __LINE__);
 		if (ack == 1) {
 #if INFO_LEVEL
 			printf("ACK for previous frame's stack size received\n");
@@ -464,7 +465,7 @@ void psu_thread_migrate(const char *hostname) {
 			fprintf(stdout, "%d: Written less number of bytes to the socket than expected\n", __LINE__);
 #endif
 		}
-		read_ack(thread_info.sock_fd, __LINE__);
+		ack = read_ack(thread_info.sock_fd, __LINE__);
 		if (ack == 1) {
 #if INFO_LEVEL
 			printf("ACK for previous frame's stack received\n");
@@ -490,7 +491,7 @@ void psu_thread_migrate(const char *hostname) {
 			fprintf(stdout, "%d: Written less number of bytes to the socket than expected\n", __LINE__);
 #endif
 		}
-		read_ack(thread_info.sock_fd, __LINE__);
+		ack = read_ack(thread_info.sock_fd, __LINE__);
 		if (ack == 1) {
 #if INFO_LEVEL
 			printf("ACK for previous frame EBP stack index received\n");
