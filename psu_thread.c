@@ -15,6 +15,7 @@ static const char *delim = ": ";
 
 int n = -1, i = 0, j = 0, user_func_offset = 0;
 int ack = 0;
+int prev_frame_ebp_stack_index = -1;
 
 static ucontext_t uctx_curr;
 
@@ -268,6 +269,21 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		}
 		printf("\n");
 #endif
+		n = read(thread_info.sock_fd, &prev_frame_ebp_stack_index, sizeof(int));
+		if (n < 0) {
+#if ERROR_LEVEL
+			error("Read from socket failed\n");
+#endif
+		}
+		else if (n < sizeof(int)) {
+#if WARN_LEVEL
+			fprintf(stdout, "%d: Read less number of bytes from the socket than expected\n", __LINE__);
+#endif
+		}
+		write_ack(thread_info.sock_fd, __LINE__);
+#if DEBUG_LEVEL
+		printf("prev frame ebp stack index- %d\n", prev_frame_ebp_stack_index);
+#endif
 		if (getcontext(&thread_info.uctx_user_func) == -1) {
 #if ERROR_LEVEL
 			error("Get context in psu thread create failed\n");
@@ -293,7 +309,10 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #endif
 		// makecontext(&thread_info.uctx_user_func, (void (*)(void)) user_func + user_func_offset, 1, user_args);
 		makecontext(&thread_info.uctx_user_func, (void (*)(void)) user_func, 1, user_args);
-		// int curr_ebp = thread_info.uctx_user_func.uc_mcontext.gregs[EBP];
+		int curr_ebp = thread_info.uctx_user_func.uc_mcontext.gregs[EBP];
+#if DEBUG_LEVEL
+		printf("curr ebp- %x\n", curr_ebp);
+#endif
 		int prev_eip = thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / 4 - 3];
 #if DEBUG_LEVEL
 		printf("prev eip- %x\n", prev_eip);
@@ -311,6 +330,9 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #endif
 		thread_info.uctx_user_func.uc_mcontext.gregs[EIP] = user_func + user_func_offset;
 		// thread_info.uctx_user_func.uc_mcontext.gregs[EBP] = (int *) thread_info.uctx_user_func.uc_stack.ss_sp + (thread_info.uctx_user_func.uc_stack.ss_size / 4) - 1;
+		thread_info.user_func_stack[2044] = thread_info.uctx_user_func.uc_mcontext.gregs[EBP];
+		thread_info.uctx_user_func.uc_mcontext.gregs[EBP] = &thread_info.user_func_stack[prev_frame_ebp_stack_index];
+		thread_info.uctx_user_func.uc_mcontext.gregs[ESP] = &thread_info.user_func_stack[(thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / 4];
 #if DEBUG_LEVEL
 		/*
 		printf("User func stack data-\n");
@@ -459,6 +481,32 @@ void psu_thread_migrate(const char *hostname) {
 		else if (!ack) {
 #if ERROR_LEVEL
 			error("NACK for previous frame's stack received\n");
+#endif
+		}
+		int prev_frame_ebp_stack_index = (((int *) thread_info.uctx_user_func.uc_stack.ss_sp)[ebp_offset / 4] - (unsigned int) thread_info.uctx_user_func.uc_stack.ss_sp) / 4;
+#if DEBUG_LEVEL
+		printf("prev frame ebp stack index- %d\n", prev_frame_ebp_stack_index);
+#endif
+		n = write(thread_info.sock_fd, &prev_frame_ebp_stack_index, sizeof(int));
+		if (n < 0) {
+#if ERROR_LEVEL
+			error("Write to socket failed\n");
+#endif
+		}
+		else if (n < sizeof(int)) {
+#if WARN_LEVEL
+			fprintf(stdout, "%d: Written less number of bytes to the socket than expected\n", __LINE__);
+#endif
+		}
+		read_ack(thread_info.sock_fd, __LINE__);
+		if (ack == 1) {
+#if INFO_LEVEL
+			printf("ACK for previous frame EBP stack index received\n");
+#endif
+		}
+		else if (!ack) {
+#if ERROR_LEVEL
+			error("NACK for previous frame EBP stack index received\n");
 #endif
 		}
 		exit(0);
