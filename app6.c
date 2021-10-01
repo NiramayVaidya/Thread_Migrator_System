@@ -49,6 +49,7 @@ void *foo2(void *arg) {
 	print_hostname();
 	printf("Foo2: Entry\n");
 	foo3(arg);
+	print_hostname();
 	printf("Foo2: Exit\n");
 	return NULL;
 }
