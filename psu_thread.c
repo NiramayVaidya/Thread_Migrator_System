@@ -177,6 +177,7 @@ void psu_thread_setup_init(int mode) {
 #endif
 		}
 		thread_info.sock_fd = newsockfd;
+		close(sockfd);
 	}
 	else {
 #if ERROR_LEVEL
@@ -278,6 +279,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #if DEBUG_LEVEL
 		printf("prev frame ebp stack index- %d\n", prev_frame_ebp_stack_index);
 #endif
+		close(thread_info.sock_fd);
 		if (getcontext(&thread_info.uctx_user_func) == -1) {
 #if ERROR_LEVEL
 			error("Get context in psu thread create failed\n");
@@ -502,6 +504,7 @@ void psu_thread_migrate(const char *hostname) {
 			error("NACK for previous frame EBP stack index received\n");
 #endif
 		}
+		close(thread_info.sock_fd);
 		exit(0);
 	}
 
