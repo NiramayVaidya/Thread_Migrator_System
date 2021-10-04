@@ -15,16 +15,28 @@
 #include <signal.h>
 // #include <bits/sigstack.h>
 
+#ifdef __x86_64__
 #ifdef __USE_GNU
-#define EBP REG_EBP
-#define ESP REG_ESP
-#define EIP REG_EIP
-#define UESP REG_UESP
+#define BP REG_RBP
+#define SP REG_RSP
+#define IP REG_RIP
 #else
-#define EBP 6
-#define ESP 7
-#define EIP 14
-#define UESP 17
+#define BP 10
+#define SP 15
+#define IP 16
+#endif
+#else
+#ifdef __USE_GNU
+#define BP REG_EBP
+#define SP REG_ESP
+#define IP REG_EIP
+#define USP REG_UESP
+#else
+#define BP 6
+#define SP 7
+#define IP 14
+#define USP 17
+#endif
 #endif
 
 #define DEBUG_LEVEL 0
@@ -41,7 +53,7 @@ typedef struct psu_thread_info {
 	int port;
 	int sock_fd;
 	ucontext_t uctx_user_func;
-	int user_func_stack[SIGSTKSZ / 4];
+	size_t user_func_stack[SIGSTKSZ / sizeof(size_t)];
 	void (*user_func)(void);
 } psu_thread_info_t;
 
