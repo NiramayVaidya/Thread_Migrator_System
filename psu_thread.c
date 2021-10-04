@@ -309,14 +309,22 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #if DEBUG_LEVEL
 		printf("curr bp- %x\n", curr_bp);
 #endif
+#ifdef __x86_64__
+		size_t prev_ip = thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 2];
+#else
 		size_t prev_ip = thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 3];
+#endif
 #if DEBUG_LEVEL
 		printf("prev ip- %x\n", prev_ip);
 #endif
 		for (int i = thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 1, j = received_stack_size / sizeof(size_t) - 1; i >= (thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / sizeof(size_t), j >= 0; i--, j--) {
 			thread_info.user_func_stack[i] = received_stack[j];
 		}
+#ifdef __x86_64__
+		thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 2] = prev_ip;
+#else
 		thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 3] = prev_ip;
+#endif
 #if DEBUG_LEVEL
 		printf("user func stack-\n");
 		for (int i = (thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / sizeof(size_t); i < thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t); i++) {
@@ -326,7 +334,11 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #endif
 		thread_info.uctx_user_func.uc_mcontext.gregs[IP] = (greg_t) user_func + user_func_offset;
 		// thread_info.uctx_user_func.uc_mcontext.gregs[BP] = (size_t *) thread_info.uctx_user_func.uc_stack.ss_sp + (thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t)) - 1;
+#ifdef __x86_64__
+		thread_info.user_func_stack[(thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t)) - 3] = curr_bp;
+#else
 		thread_info.user_func_stack[(thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t)) - 4] = curr_bp;
+#endif
 		thread_info.uctx_user_func.uc_mcontext.gregs[BP] = (greg_t) &thread_info.user_func_stack[prev_frame_bp_stack_index];
 		thread_info.uctx_user_func.uc_mcontext.gregs[SP] = (greg_t) &thread_info.user_func_stack[(thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / sizeof(size_t)];
 #if DEBUG_LEVEL
