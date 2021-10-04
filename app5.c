@@ -48,5 +48,7 @@ int main(int argc, char *argv[]) {
 	strcpy(REMOTE_HOSTNAME, argv[1]);
 	psu_thread_create(foo, (void *) 10);
 
+	printf("Main: Exit\n");
+
 	return 0;
 }
