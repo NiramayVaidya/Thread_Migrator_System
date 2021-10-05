@@ -1,4 +1,4 @@
-// Sample Application 7
+// Sample Application 11
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,21 +20,15 @@ void print_hostname() {
 }
 
 void *foo(void *arg) {
-	int i, j;
-	int n = (int *) arg;
+	int a = (int *) arg;
+	size_t b = &a;
 	print_hostname();
-	printf("Foo: Entry\n");
-	for (i = 0; i < n; i++) {
-		printf("%d\t", i);
-	}
-	printf("\n");
+	printf("Foo: value of a = %d\n", a);
+	printf("Foo: value of b = %lx\n", b);
 	psu_thread_migrate(REMOTE_HOSTNAME);
 	print_hostname();
-	for (j = i - 1; j >= 0; j--) {
-		printf("%d\t", j);
-	}
-	printf("\n");
-	printf("Foo: Exit\n");
+	printf("Foo: value of a = %d\n", a);
+	printf("Foo: value of b = %lx\n", b);
 	return NULL;
 }
 
