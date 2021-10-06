@@ -1,3 +1,20 @@
+/* An important point to be noted about this implementation is that the server
+ * resumes the user function from the next instruction after the call to psu
+ * thread migrate i.e. it resumes at the point immediately after the return of
+ * psu thread migrate in the user function, instead of resuming within the psu
+ * thread migrate function itself
+ * This is based on the assumption that psu thread migrate has nothing to
+ * execute at the server side, so from a correctness standpoint, nothing is
+ * violated as nothing is skipped from having been executed on the server once 
+ * the user function resumes
+ * This assumption holds true since this implementation itself makes sure that
+ * psu thread migrate has nothing to execute at the server side (psu thread
+ * migrate does have some initial variable declarations but they pertain to the
+ * following client side execution, and have no significance with respect to the
+ * server side execution, and hence, their initialization at the server side can
+ * be ignored)
+ */
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -8,6 +25,8 @@
 
 #include "psu_thread.h"
 
+extern char REMOTE_HOSTNAME[255];
+
 static const char *filename = "server_sock_info.in";
 static const char *hostname_token = "hostname: ";
 static const char *port_token = "port: ";
@@ -17,87 +36,103 @@ static ucontext_t uctx_curr;
 
 psu_thread_info_t thread_info;
 
+/* If any API or system call fails, print the error message and exit
+ */
 static void error(const char *msg) {
 	perror(msg);
 	exit(0);
 }
 
+/* Parses the server IP and port from the server_sock_info.in file located in
+ * the current directory, since the remote hostname IP passed in from the
+ * command line is not accessible in the psu thread init function because the
+ * command line argument is copied into REMOTE_HOSTNAME after the call to psu
+ * thread init in the app, so an extern declaration will not help (psu thread
+ * init requires the remote hostname IP in order to establish the socket
+ * connection, and moreover, at the server side, the command line will have
+ * provided the client machine's IP, which is of no use)
+ * The server IP in this file and the IP passed to the client when running from
+ * the command line must be the same
+ * The server port can be any value from 1024 to 65535 (both limits inclusive)
+ */
 static void get_server_socket_info(void) {
-		FILE *server_sock_info_fp = fopen(filename, "r");
-		if (server_sock_info_fp == NULL) {
+	FILE *server_sock_info_fp = fopen(filename, "r");
+	if (server_sock_info_fp == NULL) {
 #if ERROR_LEVEL
-			error("Server socket information file open failed\n");
+		error("Server socket information file open failed\n");
 #endif
+	}
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t read;
+	int count = 0;
+	char hostname[HOST_NAME_MAX];
+	int port = -1;
+	while ((read = getline(&line, &len, server_sock_info_fp)) != -1) {
+		if (count > 1) {
+#if ERROR_LEVEL
+			fprintf(stderr, "Server socket information file has more lines than required\n");
+#endif
+			exit(0);
 		}
-		char *line = NULL;
-	    size_t len = 0;
-		ssize_t read;
-		int count = 0;
-		char hostname[HOST_NAME_MAX];
-		int port = -1;
-		while ((read = getline(&line, &len, server_sock_info_fp)) != -1) {
-			if (count > 1) {
+		if (!count && strstr(line, hostname_token) == NULL) {
 #if ERROR_LEVEL
-				fprintf(stderr, "Server socket information file has more lines than required\n");
+			fprintf(stderr, "Server socket information file formatting incorrect, hostname: <host> not present on 1st line\n>");
 #endif
-				exit(0);
+			exit(0);
+		}
+		else if (!count) {
+			char *token;
+			token = strtok(line, delim);
+			while (token != NULL) {
+				strcpy(hostname, token);
+				hostname[strcspn(hostname, "\n")] = 0;
+				token = strtok(NULL, delim);
 			}
-			if (!count && strstr(line, hostname_token) == NULL) {
-#if ERROR_LEVEL
-				fprintf(stderr, "Server socket information file formatting incorrect, hostname: <host> not present on 1st line\n>");
-#endif
-				exit(0);
-			}
-			else if (!count) {
-				char *token;
-				token = strtok(line, delim);
-				while (token != NULL) {
-					strcpy(hostname, token);
-					hostname[strcspn(hostname, "\n")] = 0;
-					token = strtok(NULL, delim);
-				}
 #if INFO_LEVEL
-				printf("Server hostname: %s\n", hostname);
+			printf("Server hostname: %s\n", hostname);
 #endif
-				strcpy(thread_info.hostname, hostname);
-			}
-			if (count && strstr(line, port_token) == NULL) {
+			strcpy(thread_info.hostname, hostname);
+		}
+		if (count && strstr(line, port_token) == NULL) {
 #if ERROR_LEVEL
-				fprintf(stderr, "Server socket information file formatting incorrect, port: <port> not present on 2nd line\n>");
+			fprintf(stderr, "Server socket information file formatting incorrect, port: <port> not present on 2nd line\n>");
 #endif
-				exit(0);
-			}
-			else if (count) {
-				int token_offset = 0;
-				char *token;
-				token = strtok(line, delim);
-				while (token != NULL) {
-					if (token_offset) {
-						port = atoi(token);
-						if (port < PORT_MIN || port > PORT_MAX) {
+			exit(0);
+		}
+		else if (count) {
+			int token_offset = 0;
+			char *token;
+			token = strtok(line, delim);
+			while (token != NULL) {
+				if (token_offset) {
+					port = atoi(token);
+					if (port < PORT_MIN || port > PORT_MAX) {
 #if ERROR_LEVEL
-							fprintf(stderr, "Port number in server socket information file not within valid range\n");
+						fprintf(stderr, "Port number in server socket information file not within valid range\n");
 #endif
-							exit(0);
-						}
+						exit(0);
 					}
-					token = strtok(NULL, delim);
-					token_offset++;
 				}
-#if INFO_LEVEL
-				printf("Server port: %d\n", port);
-#endif
-				thread_info.port = port;
+				token = strtok(NULL, delim);
+				token_offset++;
 			}
-			count++;
+#if INFO_LEVEL
+			printf("Server port: %d\n", port);
+#endif
+			thread_info.port = port;
 		}
-		fclose(server_sock_info_fp);
-		if (line) {
-			free(line);
-		}
+		count++;
+	}
+	fclose(server_sock_info_fp);
+	if (line) {
+		free(line);
+	}
 }
 
-int read_ack(int sock_fd, int debug_lineno) {
+/* Reads the ack from the socket, does error checking on it, and then returns it
+ */
+static int read_ack(int sock_fd, int debug_lineno) {
 	int n = -1, ack = 0; 
 	n = read(sock_fd, &ack, sizeof(int));
 	if (n < 0) {
@@ -113,7 +148,9 @@ int read_ack(int sock_fd, int debug_lineno) {
 	return ack;
 }
 
-void write_ack(int sock_fd, int debug_lineno) {
+/* Writes the ack to the socket, and does error checking on it
+ */
+static void write_ack(int sock_fd, int debug_lineno) {
 	int n = -1, ack = 1;
 	n = write(sock_fd, &ack, sizeof(int));
 	if (n < 0) {
@@ -128,6 +165,10 @@ void write_ack(int sock_fd, int debug_lineno) {
 	}
 }
 
+/* Establishes the socket connection between the client and the server, and 
+ * initializes the thread's context by storing the required information (socket
+ * and mode) in a thread info struct
+ */
 void psu_thread_setup_init(int mode) {
 	int sockfd, newsockfd, portno;
 	socklen_t clilen;
@@ -189,6 +230,12 @@ void psu_thread_setup_init(int mode) {
 	return;
 }
 
+/* At the client side, the context switch to the user function is made, whereas
+ * at the server side, all the required information to recreate the stack state
+ * in order to resume the user function (from where it was left off in the
+ * client) is obtained from the client over the established socket connection, 
+ * and then the context switch to this function is made
+ */
 int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 	int n = -1, user_func_offset = 0, prev_frame_bp_stack_index = -1;
 	thread_info.user_func = (void (*)(void)) user_func;
@@ -286,24 +333,10 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #endif
 		}
 #if DEBUG_LEVEL
-		/*
-		printf("Stack data-\n");
-		for (int i = 0; i < SIGSTKSZ / sizeof(size_t); i++) {
-			printf("%d : %x\t", i, thread_info.user_func_stack[i]);
-		}
-		printf("Stack addresses-\n");
-		for (int i = 0; i < SIGSTKSZ / sizeof(size_t); i++) {
-			printf("%d : %x\t", &thread_info.user_func_stack[i]);
-		}
-		printf("\n");
-		*/
-#endif
-#if DEBUG_LEVEL
 		printf("user func offset- %d\n", user_func_offset);
 		printf("user func- %x\n", (size_t) user_func);
 		printf("user func + user func offset- %x\n", (size_t) user_func + user_func_offset);
 #endif
-		// makecontext(&thread_info.uctx_user_func, (void (*)(void)) user_func + user_func_offset, 1, user_args);
 		makecontext(&thread_info.uctx_user_func, (void (*)(void)) user_func, 1, user_args);
 		size_t curr_bp = thread_info.uctx_user_func.uc_mcontext.gregs[BP];
 #if DEBUG_LEVEL
@@ -333,7 +366,6 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		printf("\n");
 #endif
 		thread_info.uctx_user_func.uc_mcontext.gregs[IP] = (greg_t) user_func + user_func_offset;
-		// thread_info.uctx_user_func.uc_mcontext.gregs[BP] = (size_t *) thread_info.uctx_user_func.uc_stack.ss_sp + (thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t)) - 1;
 #ifdef __x86_64__
 		thread_info.user_func_stack[(thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t)) - 3] = curr_bp;
 #else
@@ -341,19 +373,6 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #endif
 		thread_info.uctx_user_func.uc_mcontext.gregs[BP] = (greg_t) &thread_info.user_func_stack[prev_frame_bp_stack_index];
 		thread_info.uctx_user_func.uc_mcontext.gregs[SP] = (greg_t) &thread_info.user_func_stack[(thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / sizeof(size_t)];
-#if DEBUG_LEVEL
-		/*
-		printf("User func stack data-\n");
-		for (int i = 0; i < SIGSTKSZ / sizeof(size_t); i++) {
-			printf("%d : %x\t", i, thread_info.user_func_stack[i]);
-		}
-		printf("User func stack addresses-\n");
-		for (int i = 0; i < SIGSTKSZ / sizeof(size_t); i++) {
-			printf("%d : %x\t", i, (unsigned int) &thread_info.user_func_stack[i]);
-		}
-		printf("\n");
-		*/
-#endif
 		if (swapcontext(&uctx_curr, &thread_info.uctx_user_func) == -1) {
 			error("Swap context from current context to user func in psu thread create failed\n");
 		}
@@ -364,6 +383,16 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 	return 0; 
 }
 
+/* At the client side, all the required information for the user function to
+ * resume in the server from the location the client left it off at is sent over
+ * the established socket connection, whereas nothing is required to be done at
+ * the server side
+ * Over the socket connection, a request reply method is used wherein the server
+ * sends an ACK once it successfully receives some piece of data sent by the
+ * client, the client checks for the ACK, if present, sends the next piece of
+ * data, and so on, whereas on the other hand, if for some reason, the client
+ * sees a NACK, it exits
+ */
 void psu_thread_migrate(const char *hostname) {
 	int n = -1, user_func_offset = 0, ack = 0;
 	if (!thread_info.mode) {
@@ -373,44 +402,25 @@ void psu_thread_migrate(const char *hostname) {
 #endif
 		}
 #if DEBUG_LEVEL
-		/*
-		printf("Stack data-\n");
-		for (int i = 0; i < SIGSTKSZ / sizeof(size_t); i++) {
-			printf("%x\t", foo_stack[i]);
-		}
-		printf("Stack addresses-\n");
-		for (int i = 0; i < SIGSTKSZ / sizeof(size_t); i++) {
-			printf("%x\t", &foo_stack[i]);
-		}
-		printf("\n");
-		*/
-#endif
-#if DEBUG_LEVEL
 		printf("bp- %x\n", thread_info.uctx_user_func.uc_mcontext.gregs[BP]);
 		printf("ss_sp- %x\n", (size_t) thread_info.uctx_user_func.uc_stack.ss_sp);
 #endif
-
 		int bp_offset = thread_info.uctx_user_func.uc_mcontext.gregs[BP] - (size_t) thread_info.uctx_user_func.uc_stack.ss_sp;
 #if DEBUG_LEVEL
 		printf("bp offset- %d\n", bp_offset);
 #endif
-
 		int ip_offset = bp_offset + sizeof(size_t);
 		int ip_stack_index = bp_offset / sizeof(size_t) + 1;
-
 #if DEBUG_LEVEL
 		printf("ip offset- %d\n", ip_offset);
 		printf("ip stack index- %d\n", ip_stack_index);
 #endif
 		size_t ip_value = ((size_t *) thread_info.uctx_user_func.uc_stack.ss_sp)[ip_stack_index];
-
 #if DEBUG_LEVEL
 		printf("user func- %x\n", (size_t) thread_info.user_func);
 		printf("ip value- %x\n", ip_value);
 #endif
-
 		user_func_offset = ip_value - (size_t) thread_info.user_func;
-
 #if DEBUG_LEVEL
 		printf("user func offset- %d\n", user_func_offset);
 #endif
@@ -521,6 +531,5 @@ void psu_thread_migrate(const char *hostname) {
 		close(thread_info.sock_fd);
 		exit(0);
 	}
-
 	return;
 }

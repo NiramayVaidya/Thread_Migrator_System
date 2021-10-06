@@ -13,7 +13,6 @@
 #include <pthread.h>
 #include <limits.h>
 #include <signal.h>
-// #include <bits/sigstack.h>
 
 #ifdef __x86_64__
 #ifdef __USE_GNU
