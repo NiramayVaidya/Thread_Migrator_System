@@ -31,6 +31,8 @@ static const char *filename = "server_sock_info.in";
 static const char *hostname_token = "hostname: ";
 static const char *port_token = "port: ";
 static const char *delim = ": ";
+static const char *localhost_ip = "127.0.0.1";
+static const char *localhost_alias = "localhost";
 
 static ucontext_t uctx_curr;
 
@@ -92,6 +94,8 @@ static void get_server_socket_info(void) {
 #if INFO_LEVEL
 			printf("Server hostname: %s\n", hostname);
 #endif
+			/* Storing the hostname read from the file as part of thread info
+			 */
 			strcpy(thread_info.hostname, hostname);
 		}
 		if (count && strstr(line, port_token) == NULL) {
@@ -120,6 +124,8 @@ static void get_server_socket_info(void) {
 #if INFO_LEVEL
 			printf("Server port: %d\n", port);
 #endif
+			/* Storing the port read from the file as part of thread info
+			 */
 			thread_info.port = port;
 		}
 		count++;
@@ -187,6 +193,8 @@ void psu_thread_setup_init(int mode) {
 	serv_addr.sin_port = htons(thread_info.port);
 
 	if (!mode) {
+		/** Getting the IP address for the server's hostname
+		 */
 		server = gethostbyname(thread_info.hostname);
 		if (server == NULL) {
 #if ERROR_LEVEL
@@ -194,29 +202,48 @@ void psu_thread_setup_init(int mode) {
 #endif
 			exit(0);
 		}
-		bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+		bcopy((char *) server->h_addr, (char *) &serv_addr.sin_addr.s_addr, server->h_length);
+		/* Connecting to the server
+		 */
 		if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
 #if ERROR_LEVEL
 			error("Connection failed\n");
 #endif
 		}
+		/* Storing the socket fd as part of thread info
+		 */
 		thread_info.sock_fd = sockfd;
 	}
 	else if (mode == 1) {
 		serv_addr.sin_addr.s_addr = INADDR_ANY;
+		/* Binding the server to its IP and the port
+		 */
 		if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
 #if ERROR_LEVEL
 			error("Bind failed\n");
 #endif
 		}
+		/* Listening for connections
+		 */
 		listen(sockfd, 5);
 		clilen = sizeof(cli_addr);
+		/* Accepting the connection from the client
+		 */
 		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+		/* Reusing the hostname struct member of thread info which previously
+		 * contained the server hostname to now contain the client hostname,
+		 * though not making the check if the connection request obtained is
+		 * from the correct client or not here, since REMOTE_HOSTNAME is not yet
+		 * available from the command line
+		 */
+		strcpy(thread_info.hostname, (char *) inet_ntoa(cli_addr.sin_addr));
 		if (newsockfd < 0) {
 #if ERROR_LEVEL
 			error("Accept failed\n");
 #endif
 		}
+		/* Storing the socket fd as part of thread info
+		 */
 		thread_info.sock_fd = newsockfd;
 		close(sockfd);
 	}
@@ -226,6 +253,8 @@ void psu_thread_setup_init(int mode) {
 #endif
 		exit(0);
 	}
+	/* Storing the mode (0/1 -> client/server) as part of thread info
+	 */
 	thread_info.mode = mode;
 	return;
 }
@@ -243,21 +272,53 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 	printf("thread info user_func- %x\n", (size_t) thread_info.user_func);
 	printf("user_func- %x\n", (size_t) user_func);
 #endif
+	/* Getting the context for the user function
+	 */
 	if (getcontext(&thread_info.uctx_user_func) == -1) {
 #if ERROR_LEVEL
 		error("Get context in psu thread create failed\n");
 #endif
 	}
+	/* Setting the stack for the user function's context
+	 */
 	thread_info.uctx_user_func.uc_stack.ss_sp = thread_info.user_func_stack;
 	thread_info.uctx_user_func.uc_stack.ss_size = sizeof(thread_info.user_func_stack);
 	thread_info.uctx_user_func.uc_link = &uctx_curr;
 	if (!thread_info.mode) {
+		/* Setting the user function to its context
+		 */
 		makecontext(&thread_info.uctx_user_func, thread_info.user_func, 1, user_args);
+		/* Switching to the user function's context
+		 */
 		if (swapcontext(&uctx_curr, &thread_info.uctx_user_func) == -1) {
 			error("Swap context from current context to user_func in psu thread create failed\n");
 		}
 	}
 	else if (thread_info.mode == 1) {
+		/* If the command line hostname was passed as localhost, convert to the
+		 * corresponding IP- 127.0.0.1
+		 */
+		if (!strcmp(REMOTE_HOSTNAME, localhost_alias)) {
+			strcpy(REMOTE_HOSTNAME, localhost_ip);
+		}
+		/* Check if the accepted connection is from the correct client or not
+		 * Though ideally, this is not the appropriate location to make this
+		 * check and it should happen immediately after the connection has been
+		 * accepted, but since that is not possible as REMOTE_HOSTNAME is only 
+		 * available after the call to psu thread init returns, this is the next
+		 * closest location in psu thread create where this check can be made
+		 */
+		if (strcmp(thread_info.hostname, REMOTE_HOSTNAME)) {
+#if ERROR_LEVEL
+			fprintf(stdout, "Connection request not accepted from the correct client\n");
+#endif
+			close(thread_info.sock_fd);
+			exit(0);
+		}
+		/* Receive the user function offset from the client (return address
+		 * offset i.e. IP offset with respect to start of user function, to 
+		 * resume from)
+		 */
 		n = read(thread_info.sock_fd, &user_func_offset, sizeof(int));
 		if (n < 0) {
 #if ERROR_LEVEL
@@ -271,6 +332,8 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		}
 		write_ack(thread_info.sock_fd, __LINE__);
 		int received_stack_size = 0;
+		/* Receive the stack size from the client
+		 */
 		n = read(thread_info.sock_fd, &received_stack_size, sizeof(int));
 		if (n < 0) {
 #if ERROR_LEVEL
@@ -292,6 +355,8 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 			error("Malloc for received stack size failed\n");
 #endif
 		}
+		/* Receive the stack from the client
+		 */
 		n = read(thread_info.sock_fd, received_stack, received_stack_size);
 		if (n < 0) {
 #if ERROR_LEVEL
@@ -311,6 +376,9 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		}
 		printf("\n");
 #endif
+		/* Receive the previous frame's stack base pointer's index from the
+		 * client
+		 */
 		n = read(thread_info.sock_fd, &prev_frame_bp_stack_index, sizeof(int));
 		if (n < 0) {
 #if ERROR_LEVEL
@@ -326,7 +394,11 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #if DEBUG_LEVEL
 		printf("prev frame bp stack index- %d\n", prev_frame_bp_stack_index);
 #endif
+		/* Close the socket, since it is no longer needed
+		 */
 		close(thread_info.sock_fd);
+		/* Get the user function's context
+		 */
 		if (getcontext(&thread_info.uctx_user_func) == -1) {
 #if ERROR_LEVEL
 			error("Get context in psu thread create failed\n");
@@ -337,7 +409,12 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		printf("user func- %x\n", (size_t) user_func);
 		printf("user func + user func offset- %x\n", (size_t) user_func + user_func_offset);
 #endif
+		/* Link the user function to its context
+		 */
 		makecontext(&thread_info.uctx_user_func, (void (*)(void)) user_func, 1, user_args);
+		/* Perform migration of stack, setting of certain register values (IP,
+		 * BP, SP) before swapping to the user function's context
+		 */
 		size_t curr_bp = thread_info.uctx_user_func.uc_mcontext.gregs[BP];
 #if DEBUG_LEVEL
 		printf("curr bp- %x\n", curr_bp);
@@ -373,6 +450,8 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #endif
 		thread_info.uctx_user_func.uc_mcontext.gregs[BP] = (greg_t) &thread_info.user_func_stack[prev_frame_bp_stack_index];
 		thread_info.uctx_user_func.uc_mcontext.gregs[SP] = (greg_t) &thread_info.user_func_stack[(thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / sizeof(size_t)];
+		/* Switch to the user function's context
+		 */
 		if (swapcontext(&uctx_curr, &thread_info.uctx_user_func) == -1) {
 			error("Swap context from current context to user func in psu thread create failed\n");
 		}
@@ -396,6 +475,8 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 void psu_thread_migrate(const char *hostname) {
 	int n = -1, user_func_offset = 0, ack = 0;
 	if (!thread_info.mode) {
+		/* Get the user function's context
+		 */
 		if (getcontext(&thread_info.uctx_user_func) == -1) {
 #if ERROR_LEVEL
 			error("Get context in psu thread migrate failed\n");
@@ -424,6 +505,8 @@ void psu_thread_migrate(const char *hostname) {
 #if DEBUG_LEVEL
 		printf("user func offset- %d\n", user_func_offset);
 #endif
+		/* Send the user func offset to the server
+		 */
 		n = write(thread_info.sock_fd, &user_func_offset, sizeof(int));
 		if (n < 0) {
 #if ERROR_LEVEL
@@ -451,6 +534,8 @@ void psu_thread_migrate(const char *hostname) {
 #if DEBUG_LEVEL
 		printf("stack size to send- %d\n", stack_size_to_send);
 #endif
+		/* Send the stack size to the server
+		 */
 		n = write(thread_info.sock_fd, &stack_size_to_send, sizeof(int));
 		if (n < 0) {
 #if ERROR_LEVEL
@@ -480,6 +565,8 @@ void psu_thread_migrate(const char *hostname) {
 		}
 		printf("\n");
 #endif
+		/* Send the stack to the server
+		 */
 		n = write(thread_info.sock_fd, &thread_info.user_func_stack[prev_frame_sp_stack_index], stack_size_to_send);
 		if (n < 0) {
 #if ERROR_LEVEL
@@ -506,6 +593,8 @@ void psu_thread_migrate(const char *hostname) {
 #if DEBUG_LEVEL
 		printf("prev frame bp stack index- %d\n", prev_frame_bp_stack_index);
 #endif
+		/* Send previous frame's stack base pointer's index to the server
+		 */
 		n = write(thread_info.sock_fd, &prev_frame_bp_stack_index, sizeof(int));
 		if (n < 0) {
 #if ERROR_LEVEL
