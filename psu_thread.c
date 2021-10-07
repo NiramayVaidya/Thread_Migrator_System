@@ -452,7 +452,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		/* Migrating the stack by using both the received stack and the base
 		 * pointer offsets
 		 */
-		int k = 0;
+		int k = (received_stack_size / sizeof(size_t)) - 1;
 		for (int i = thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 1, j = received_stack_size / sizeof(size_t) - 1; i >= (thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / sizeof(size_t), j >= 0; i--, j--) {
 			if (bp_offsets[k] != -1) {
 				thread_info.user_func_stack[i] = (size_t) thread_info.uctx_user_func.uc_stack.ss_sp + bp_offsets[k];
@@ -460,7 +460,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 			else {
 				thread_info.user_func_stack[i] = received_stack[j];
 			}
-			k++;
+			k--;
 		}
 #ifdef __x86_64__
 		thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 2] = prev_ip;
