@@ -269,8 +269,8 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 	int n = -1, user_func_offset = 0, prev_frame_bp_stack_index = -1;
 	thread_info.user_func = (void (*)(void)) user_func;
 #if DEBUG_LEVEL
-	printf("thread info user_func- %x\n", (size_t) thread_info.user_func);
-	printf("user_func- %x\n", (size_t) user_func);
+	printf("thread info user_func- %lx\n", (size_t) thread_info.user_func);
+	printf("user_func- %lx\n", (size_t) user_func);
 #endif
 	/* Getting the context for the user function
 	 */
@@ -332,7 +332,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		}
 		write_ack(thread_info.sock_fd, __LINE__);
 		int received_stack_size = 0;
-		/* Receive the stack size from the client
+		/* Receive the previous frame's stack size from the client
 		 */
 		n = read(thread_info.sock_fd, &received_stack_size, sizeof(int));
 		if (n < 0) {
@@ -355,7 +355,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 			error("Malloc for received stack size failed\n");
 #endif
 		}
-		/* Receive the stack from the client
+		/* Receive the previous frame's stack from the client
 		 */
 		n = read(thread_info.sock_fd, received_stack, received_stack_size);
 		if (n < 0) {
@@ -372,7 +372,29 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #if DEBUG_LEVEL
 		printf("received stack-\n");
 		for (int i = 0; i < received_stack_size / sizeof(size_t); i++) {
-			printf("%x\t", received_stack[i]);
+			printf("%lx\t", received_stack[i]);
+		}
+		printf("\n");
+#endif
+		size_t *bp_offsets = (size_t *) malloc(received_stack_size);
+		/* Receive the previous frame's bp offsets from the client
+		 */
+		n = read(thread_info.sock_fd, bp_offsets, received_stack_size);
+		if (n < 0) {
+#if ERROR_LEVEL
+			error("Read from socket failed\n");
+#endif
+		}
+		else if (n < received_stack_size) {
+#if WARN_LEVEL
+			fprintf(stdout, "%d: Read less number of bytes from the socket than expected\n", __LINE__);
+#endif
+		}
+		write_ack(thread_info.sock_fd, __LINE__);
+#if DEBUG_LEVEL
+		printf("bp offsets-\n");
+		for (int i = 0; i < received_stack_size / sizeof(size_t); i++) {
+			printf("%lu\t", bp_offsets[i]);
 		}
 		printf("\n");
 #endif
@@ -406,8 +428,8 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		}
 #if DEBUG_LEVEL
 		printf("user func offset- %d\n", user_func_offset);
-		printf("user func- %x\n", (size_t) user_func);
-		printf("user func + user func offset- %x\n", (size_t) user_func + user_func_offset);
+		printf("user func- %lx\n", (size_t) user_func);
+		printf("user func + user func offset- %lx\n", (size_t) user_func + user_func_offset);
 #endif
 		/* Link the user function to its context
 		 */
@@ -417,7 +439,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		 */
 		size_t curr_bp = thread_info.uctx_user_func.uc_mcontext.gregs[BP];
 #if DEBUG_LEVEL
-		printf("curr bp- %x\n", curr_bp);
+		printf("curr bp- %lx\n", curr_bp);
 #endif
 #ifdef __x86_64__
 		size_t prev_ip = thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 2];
@@ -425,10 +447,20 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 		size_t prev_ip = thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 3];
 #endif
 #if DEBUG_LEVEL
-		printf("prev ip- %x\n", prev_ip);
+		printf("prev ip- %lx\n", prev_ip);
 #endif
+		/* Migrating the stack by using both the received stack and the base
+		 * pointer offsets
+		 */
+		int k = 0;
 		for (int i = thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 1, j = received_stack_size / sizeof(size_t) - 1; i >= (thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / sizeof(size_t), j >= 0; i--, j--) {
-			thread_info.user_func_stack[i] = received_stack[j];
+			if (bp_offsets[k] != -1) {
+				thread_info.user_func_stack[i] = (size_t) thread_info.uctx_user_func.uc_stack.ss_sp + bp_offsets[k];
+			}
+			else {
+				thread_info.user_func_stack[i] = received_stack[j];
+			}
+			k++;
 		}
 #ifdef __x86_64__
 		thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t) - 2] = prev_ip;
@@ -438,7 +470,7 @@ int psu_thread_create(void *(*user_func)(void *), void *user_args) {
 #if DEBUG_LEVEL
 		printf("user func stack-\n");
 		for (int i = (thread_info.uctx_user_func.uc_stack.ss_size - received_stack_size) / sizeof(size_t); i < thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t); i++) {
-			printf("%x\t", thread_info.user_func_stack[i]);
+			printf("%lx\t", thread_info.user_func_stack[i]);
 		}
 		printf("\n");
 #endif
@@ -483,8 +515,8 @@ void psu_thread_migrate(const char *hostname) {
 #endif
 		}
 #if DEBUG_LEVEL
-		printf("bp- %x\n", thread_info.uctx_user_func.uc_mcontext.gregs[BP]);
-		printf("ss_sp- %x\n", (size_t) thread_info.uctx_user_func.uc_stack.ss_sp);
+		printf("bp- %llx\n", (greg_t) thread_info.uctx_user_func.uc_mcontext.gregs[BP]);
+		printf("ss_sp- %lx\n", (size_t) thread_info.uctx_user_func.uc_stack.ss_sp);
 #endif
 		int bp_offset = thread_info.uctx_user_func.uc_mcontext.gregs[BP] - (size_t) thread_info.uctx_user_func.uc_stack.ss_sp;
 #if DEBUG_LEVEL
@@ -498,8 +530,8 @@ void psu_thread_migrate(const char *hostname) {
 #endif
 		size_t ip_value = ((size_t *) thread_info.uctx_user_func.uc_stack.ss_sp)[ip_stack_index];
 #if DEBUG_LEVEL
-		printf("user func- %x\n", (size_t) thread_info.user_func);
-		printf("ip value- %x\n", ip_value);
+		printf("user func- %lx\n", (size_t) thread_info.user_func);
+		printf("ip value- %lx\n", ip_value);
 #endif
 		user_func_offset = ip_value - (size_t) thread_info.user_func;
 #if DEBUG_LEVEL
@@ -534,7 +566,7 @@ void psu_thread_migrate(const char *hostname) {
 #if DEBUG_LEVEL
 		printf("stack size to send- %d\n", stack_size_to_send);
 #endif
-		/* Send the stack size to the server
+		/* Send the previous frame's stack size to the server
 		 */
 		n = write(thread_info.sock_fd, &stack_size_to_send, sizeof(int));
 		if (n < 0) {
@@ -561,11 +593,11 @@ void psu_thread_migrate(const char *hostname) {
 #if DEBUG_LEVEL
 		printf("prev frame stack-\n");
 		for (int i = prev_frame_sp_stack_index; i < thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t); i++) {
-			printf("%x\t", thread_info.user_func_stack[i]);
+			printf("%lx\t", thread_info.user_func_stack[i]);
 		}
 		printf("\n");
 #endif
-		/* Send the stack to the server
+		/* Send the previous frame's stack to the server
 		 */
 		n = write(thread_info.sock_fd, &thread_info.user_func_stack[prev_frame_sp_stack_index], stack_size_to_send);
 		if (n < 0) {
@@ -587,6 +619,57 @@ void psu_thread_migrate(const char *hostname) {
 		else if (!ack) {
 #if ERROR_LEVEL
 			error("NACK for previous frame's stack received\n");
+#endif
+		}
+		/* Generate offsets from stack base for base pointer values stored in
+		 * previous frame's stack
+		 */
+		size_t *bp_offsets = (size_t *) malloc(stack_size_to_send);
+		int j = 0;
+		for (int i = prev_frame_sp_stack_index; i < thread_info.uctx_user_func.uc_stack.ss_size / sizeof(size_t); i++) {
+			if ((size_t) thread_info.uctx_user_func.uc_stack.ss_sp <= thread_info.user_func_stack[i] && thread_info.user_func_stack[i] <= &thread_info.user_func_stack[thread_info.uctx_user_func.uc_stack.ss_size]) {
+				bp_offsets[j] = thread_info.user_func_stack[i] - (size_t) thread_info.uctx_user_func.uc_stack.ss_sp;
+			}
+			else {
+				/* Since it's a size_t (unsigned) array, -1 would actually be
+				 * the largest unsigned value that can fit in the range, but
+				 * this is okay, as we are only concerned about representing an
+				 * impossible offset, and this will still suffice
+				 * 0 can't be used because it could be a valid offset value
+				 */
+				bp_offsets[j] = -1;
+			}
+			j++;
+		}
+#if DEBUG_LEVEL
+		printf("bp offsets-\n");
+		for (j = 0; j < stack_size_to_send / sizeof(size_t); j++) {
+			printf("%lu\t", bp_offsets[j]);
+		}
+		printf("\n");
+#endif
+		/* Send the previous frame's bp offsets to the server
+		 */
+		n = write(thread_info.sock_fd, bp_offsets, stack_size_to_send);
+		if (n < 0) {
+#if ERROR_LEVEL
+			error("Write to socket failed\n");
+#endif
+		}
+		else if (n < stack_size_to_send) {
+#if WARN_LEVEL
+			fprintf(stdout, "%d: Written less number of bytes to the socket than expected\n", __LINE__);
+#endif
+		}
+		ack = read_ack(thread_info.sock_fd, __LINE__);
+		if (ack == 1) {
+#if INFO_LEVEL
+			printf("ACK for previous frame's bp offsets received\n");
+#endif
+		}
+		else if (!ack) {
+#if ERROR_LEVEL
+			error("NACK for previous frame's bp offsets received\n");
 #endif
 		}
 		int prev_frame_bp_stack_index = (((size_t *) thread_info.uctx_user_func.uc_stack.ss_sp)[bp_offset / sizeof(size_t)] - (size_t) thread_info.uctx_user_func.uc_stack.ss_sp) / sizeof(size_t);
