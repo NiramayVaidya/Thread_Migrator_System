@@ -702,7 +702,6 @@ void psu_thread_migrate(const char *hostname) {
 #endif
 		}
 		close(thread_info.sock_fd);
-		exit(0);
 	}
 	return;
 }
