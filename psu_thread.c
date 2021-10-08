@@ -702,6 +702,11 @@ void psu_thread_migrate(const char *hostname) {
 #endif
 		}
 		close(thread_info.sock_fd);
+		/* Switching to the main's context
+		 */
+		if (swapcontext(&thread_info.uctx_user_func, &uctx_curr) == -1) {
+			error("Swap context from user_func to main's context in psu thread create failed\n");
+		}
 	}
 	return;
 }
